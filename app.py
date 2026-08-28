@@ -1,8 +1,8 @@
 import streamlit as st
 from google import genai
 
-st.set_page_config(page_title="Pratyush AI Assistant", page_icon="🤖", layout="wide")
-st.title("🤖 Pratyush AI Assistant")
+st.set_page_config(page_title="Roxy-AI", page_icon="🤖", layout="wide")
+st.title("🤖 Roxy-AI")
 
 st.sidebar.header("API Configuration")
 api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
