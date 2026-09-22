@@ -6,9 +6,6 @@ from google.genai import types
 # Permanent backend Gemini API Key
 PERMANENT_GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or "AQ.Ab8RN6IfN_B69ELmxDUEHjv_81PEorIaOVswzDUM7MsjWlr3qw"
 
-# ---------------------------------------------------------
-# PAGE CONFIG
-# ---------------------------------------------------------
 st.set_page_config(
     page_title="Pratyush AI - Gemini Chatbot",
     page_icon="🤖",
@@ -16,353 +13,106 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ---------------------------------------------------------
-# CUSTOM CSS / MODERN DARK GLASSMORPHISM
-# ---------------------------------------------------------
 st.markdown(
     """
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-        html, body, [class*="css"] {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        }
-
-        /* Main background */
-        .stApp {
-            background: linear-gradient(135deg, #090d16 0%, #0f172a 50%, #0a0e1a 100%);
-            color: #f3f4f6;
-        }
-
-        /* Sidebar styling */
-        section[data-testid="stSidebar"] {
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(12px);
-            border-right: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        /* Main content container */
-        .block-container {
-            max-width: 950px;
-            padding-top: 1.5rem;
-            padding-bottom: 6rem;
-        }
-
-        /* App Header */
-        .app-header {
-            text-align: center;
-            padding: 10px 0 25px 0;
-            margin-bottom: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .app-title {
-            font-size: 2.4rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #60a5fa 0%, #a855f7 50%, #ec4899 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 6px;
-            letter-spacing: -0.02em;
-        }
-
-        .app-subtitle {
-            color: #94a3b8;
-            font-size: 0.95rem;
-            font-weight: 400;
-        }
-
-        /* Sidebar headers */
-        .sidebar-heading {
-            font-size: 0.82rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #94a3b8;
-            font-weight: 700;
-            margin-bottom: 10px;
-        }
-
-        /* Buttons */
-        .stButton > button {
-            border-radius: 10px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .stButton > button:hover {
-            border-color: #60a5fa;
-            box-shadow: 0 0 12px rgba(96, 165, 250, 0.25);
-        }
-
-        /* Chat messages styling */
-        div[data-testid="stChatMessage"] {
-            border-radius: 14px;
-            padding: 12px 18px;
-            margin-bottom: 12px;
-            background: rgba(30, 41, 59, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarIcon-user"]) {
-            background: rgba(37, 99, 235, 0.15);
-            border: 1px solid rgba(59, 130, 246, 0.25);
-        }
-
-        /* Code block styling */
-        pre {
-            border-radius: 10px !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        }
+        .stApp { background: linear-gradient(135deg, #090d16 0%, #0f172a 50%, #0a0e1a 100%); color: #f3f4f6; }
+        section[data-testid="stSidebar"] { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); border-right: 1px solid rgba(255, 255, 255, 0.08); }
+        .block-container { max-width: 950px; padding-top: 1.5rem; padding-bottom: 6rem; }
+        .app-title { font-size: 2.4rem; font-weight: 800; background: linear-gradient(135deg, #60a5fa 0%, #a855f7 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; }
+        div[data-testid="stChatMessage"] { border-radius: 14px; padding: 12px 18px; margin-bottom: 12px; background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# ---------------------------------------------------------
-# SESSION STATE INITIALIZATION
-# ---------------------------------------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
 if "pending_prompt" not in st.session_state:
     st.session_state.pending_prompt = None
 
-# System personas
 PERSONAS = {
-    "Helpful AI Assistant": "You are Pratyush AI, a helpful, precise, friendly, and knowledgeable assistant powered by Google Gemini.",
-    "Expert Software Engineer": "You are an expert senior software engineer. Provide robust, clean, well-documented code with concise explanations and best practices.",
-    "Data Scientist & Analyst": "You are an expert data scientist and statistical analyst. Explain concepts clearly and write clean Python, pandas, and scikit-learn code.",
-    "Creative Writer & Brainstormer": "You are a creative writer and ideation specialist. Provide innovative, engaging, and imaginative ideas.",
-    "Custom Persona": "",
+    "Helpful AI Assistant": "You are Pratyush AI, a helpful, precise, friendly assistant.",
+    "Expert Software Engineer": "You are an expert senior software engineer. Provide robust code with concise explanations.",
+    "Data Scientist": "You are an expert data scientist. Explain concepts clearly and write clean Python code.",
 }
 
-# ---------------------------------------------------------
-# SIDEBAR
-# ---------------------------------------------------------
 with st.sidebar:
-    st.markdown('<div class="sidebar-heading">🧠 Model Selection</div>', unsafe_allow_html=True)
-    model_options = [
-        "gemini-2.5-flash",
-        "gemini-2.5-pro",
-        "gemini-2.0-flash",
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
-        "Custom Model ID",
-    ]
-    selected_model = st.selectbox(
-        "Model",
-        options=model_options,
-        index=0,
-        help="gemini-2.5-flash is fast, lightweight, and versatile.",
-    )
-
-    if selected_model == "Custom Model ID":
-        custom_model = st.text_input("Enter Model Name", value="gemini-2.5-flash")
-        active_model = custom_model.strip()
-    else:
-        active_model = selected_model
-
-    st.divider()
-
-    st.markdown('<div class="sidebar-heading">🎭 AI Persona</div>', unsafe_allow_html=True)
+    st.markdown("### 🧠 Model Selection")
+    active_model = st.selectbox("Model", ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"], index=0)
     persona_choice = st.selectbox("Persona", list(PERSONAS.keys()), index=0)
+    system_instruction = PERSONAS[persona_choice]
+    temperature = st.slider("Temperature", 0.0, 2.0, 0.7, 0.05)
+    max_tokens = st.number_input("Max Output Tokens", 256, 8192, 4096, 512)
     
-    if persona_choice == "Custom Persona":
-        system_instruction = st.text_area(
-            "Custom System Instruction",
-            value="You are a helpful AI assistant.",
-            height=100,
-        )
-    else:
-        system_instruction = PERSONAS[persona_choice]
+    if st.button("🗑️ Clear Chat", use_container_width=True):
+        st.session_state.messages = []
+        st.session_state.pending_prompt = None
+        st.rerun()
 
-    st.divider()
+st.markdown('<div class="app-title">🤖 Pratyush AI</div>', unsafe_allow_html=True)
+st.caption("<center>Powered by Google Gemini</center>", unsafe_allow_html=True)
 
-    st.markdown('<div class="sidebar-heading">🎛️ Parameters</div>', unsafe_allow_html=True)
-    temperature = st.slider(
-        "Temperature",
-        min_value=0.0,
-        max_value=2.0,
-        value=0.7,
-        step=0.05,
-        help="Higher values make output more creative; lower values make it more focused and deterministic.",
-    )
-
-    top_p = st.slider(
-        "Top P",
-        min_value=0.0,
-        max_value=1.0,
-        value=0.95,
-        step=0.05,
-    )
-
-    max_tokens = st.number_input(
-        "Max Output Tokens",
-        min_value=256,
-        max_value=8192,
-        value=4096,
-        step=512,
-    )
-
-    st.divider()
-
-    # Chat Actions
-    col_clear, col_export = st.columns(2)
-    with col_clear:
-        if st.button("🗑️ Clear", use_container_width=True, help="Clear chat history"):
-            st.session_state.messages = []
-            st.session_state.pending_prompt = None
-            st.rerun()
-
-    with col_export:
-        if st.session_state.messages:
-            chat_md = "# Conversation with Pratyush AI\n\n"
-            for m in st.session_state.messages:
-                speaker = "User" if m["role"] == "user" else "Pratyush AI"
-                chat_md += f"### {speaker}:\n{m['content']}\n\n"
-            st.download_button(
-                "📥 Export",
-                data=chat_md,
-                file_name="pratyush_ai_conversation.md",
-                mime="text/markdown",
-                use_container_width=True,
-                help="Download conversation as Markdown",
-            )
-
-    st.caption("🤖 **Pratyush AI** | Ready to Chat")
-
-# ---------------------------------------------------------
-# HEADER
-# ---------------------------------------------------------
-st.markdown(
-    f"""
-    <div class="app-header">
-        <div class="app-title">🤖 Pratyush AI</div>
-        <div class="app-subtitle">
-            Your intelligent assistant powered by Google Gemini (<code>{active_model}</code>)
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-# ---------------------------------------------------------
-# EMPTY STATE & STARTERS
-# ---------------------------------------------------------
 if not st.session_state.messages:
-    st.markdown(
-        """
-        <div style="text-align: center; margin: 30px 0 25px 0;">
-            <p style="font-size: 1.25rem; font-weight: 600; color: #f1f5f9; margin-bottom: 6px;">
-                How can I assist you today?
-            </p>
-            <p style="color: #94a3b8; font-size: 0.9rem;">
-                Select a quick prompt below or type your question in the chat bar.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
     col1, col2, col3 = st.columns(3)
-
     with col1:
-        if st.button(
-            "💻  Code Recursion\n\nWrite a clean Python program that demonstrates recursion with memoization.",
-            use_container_width=True,
-        ):
-            st.session_state.pending_prompt = "Write a clean Python program that demonstrates recursion with memoization and visual explanations."
+        if st.button("💻  Code Recursion", use_container_width=True):
+            st.session_state.pending_prompt = "Write a clean Python program that demonstrates recursion with memoization."
             st.rerun()
-
     with col2:
-        if st.button(
-            "🧠  Explain Concept\n\nExplain how Transformers and Large Language Models work in simple analogies.",
-            use_container_width=True,
-        ):
-            st.session_state.pending_prompt = "Explain how Transformers and Large Language Models work using simple, intuitive analogies."
+        if st.button("🧠  Explain Concept", use_container_width=True):
+            st.session_state.pending_prompt = "Explain how Transformers and Large Language Models work in simple analogies."
             st.rerun()
-
     with col3:
-        if st.button(
-            "💡  Brainstorm Ideas\n\nGive me 5 unique, high-impact AI project ideas for full-stack developers.",
-            use_container_width=True,
-        ):
-            st.session_state.pending_prompt = "Give me 5 unique, high-impact AI project ideas suitable for modern full-stack web developers."
+        if st.button("💡  Brainstorm Ideas", use_container_width=True):
+            st.session_state.pending_prompt = "Give me 5 unique, high-impact AI project ideas for full-stack developers."
             st.rerun()
 
-# ---------------------------------------------------------
-# DISPLAY CHAT HISTORY
-# ---------------------------------------------------------
 for message in st.session_state.messages:
-    role = message["role"]
-    avatar = "👤" if role == "user" else "🤖"
-    with st.chat_message(role, avatar=avatar):
+    with st.chat_message(message["role"], avatar="👤" if message["role"] == "user" else "🤖"):
         st.markdown(message["content"])
 
-# ---------------------------------------------------------
-# CHAT INPUT & EXECUTION
-# ---------------------------------------------------------
 user_input = st.chat_input("Message Pratyush AI...")
-
-# Trigger on either chat_input or a clicked quick-start button
 prompt_to_run = user_input or st.session_state.pending_prompt
 
 if prompt_to_run:
-    # Clear pending prompt so it doesn't trigger again on subsequent renders
     st.session_state.pending_prompt = None
-
-    # Append user message
-    st.session_state.messages.append({
-        "role": "user",
-        "content": prompt_to_run,
-    })
-
-    # Render user message
+    st.session_state.messages.append({"role": "user", "content": prompt_to_run})
     with st.chat_message("user", avatar="👤"):
         st.markdown(prompt_to_run)
 
-    # Format history into Gemini types.Content
-    contents = []
-    for msg in st.session_state.messages:
-        gemini_role = "user" if msg["role"] == "user" else "model"
-        contents.append(
-            types.Content(
-                role=gemini_role,
-                parts=[types.Part.from_text(text=msg["content"])],
-            )
+    contents = [
+        types.Content(
+            role="user" if m["role"] == "user" else "model",
+            parts=[types.Part.from_text(text=m["content"])],
         )
+        for m in st.session_state.messages
+    ]
 
-    # Stream bot response
     with st.chat_message("assistant", avatar="🤖"):
         try:
             client = genai.Client(api_key=PERMANENT_GEMINI_API_KEY)
-
             config = types.GenerateContentConfig(
                 temperature=temperature,
-                top_p=top_p,
                 max_output_tokens=max_tokens,
-                system_instruction=system_instruction.strip() if system_instruction.strip() else None,
+                system_instruction=system_instruction,
             )
-
-            # Stream generator
             def stream_response():
-                stream = client.models.generate_content_stream(
-                    model=active_model,
-                    contents=contents,
-                    config=config,
-                )
+                stream = client.models.generate_content_stream(model=active_model, contents=contents, config=config)
                 for chunk in stream:
                     if chunk.text:
                         yield chunk.text
-
-            # Stream with Streamlit's native write_stream
             full_response = st.write_stream(stream_response)
-
-            # Save assistant message to session state
-            st.session_state.messages.append({
-                "role": "assistant",
-                "content": full_response,
-            })
-
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
         except Exception as e:
-            error_message = f"❌ **Error generating response:**\n\n```\n{str(e)}\n```"
+            err_str = str(e)
+            if "401" in err_str or "UNAUTHENTICATED" in err_str:
+                error_message = (
+                    "❌ **Authentication Failed (401)**: The configured Gemini API key is invalid.\n\n"
+                    "• Google AI Studio API keys start with `AIzaSy...`\n"
+                    "• The key currently provided starts with `AQ.Ab8...` (which is not a valid Gemini API key).\n"
+                    "• Please get a free API key at **https://aistudio.google.com/app/apikey** and update it in your `.env` file (`GEMINI_API_KEY=AIzaSy...`)."
+                )
+            else:
+                error_message = f"❌ **Error generating response:**\n\n```\n{err_str}\n```"
             st.markdown(error_message)
