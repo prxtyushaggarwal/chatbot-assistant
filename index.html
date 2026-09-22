@@ -249,26 +249,6 @@
       color: #93c5fd;
     }
 
-    .badge-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 0.75rem;
-      padding: 4px 10px;
-      border-radius: 9999px;
-      font-weight: 600;
-    }
-    .badge-status.connected {
-      background: rgba(16, 185, 129, 0.15);
-      color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-    .badge-status.disconnected {
-      background: rgba(245, 158, 11, 0.15);
-      color: #fbbf24;
-      border: 1px solid rgba(245, 158, 11, 0.3);
-    }
-
     /* Chat Messages Viewport */
     #chat-viewport {
       flex: 1;
@@ -737,7 +717,7 @@
 
     <div class="sidebar-footer">
       <button class="ghost-btn" onclick="openSettingsModal()">
-        ⚙️ Settings & API Key
+        ⚙️ Preferences & Prompt
       </button>
       <button class="ghost-btn" onclick="exportChat()">
         📥 Export Conversation
@@ -754,18 +734,14 @@
     <header class="chat-header">
       <div class="header-left">
         <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
-        <div class="brand-logo" style="display:none;" id="mobile-brand">
-          <span class="brand-title">Pratyush AI</span>
-        </div>
         <span class="active-model-chip" id="current-model-chip">
           ✨ <span id="chip-text">gemini-2.5-flash</span>
         </span>
       </div>
 
       <div style="display:flex; align-items:center; gap:10px;">
-        <span id="api-status" class="badge-status disconnected">● API Key Needed</span>
-        <button class="ghost-btn" style="padding:6px 10px; font-size:0.8rem;" onclick="openSettingsModal()">
-          Settings
+        <button class="ghost-btn" style="padding:6px 12px; font-size:0.82rem;" onclick="openSettingsModal()">
+          ⚙️ Preferences
         </button>
       </div>
     </header>
@@ -830,26 +806,12 @@
     </div>
   </main>
 
-  <!-- Settings Modal -->
+  <!-- Preferences Modal -->
   <div class="modal-backdrop" id="settings-modal" onclick="onModalBackdropClick(event)">
     <div class="modal-card">
       <div class="modal-header">
-        <h2 class="modal-title">⚙️ Settings</h2>
+        <h2 class="modal-title">⚙️ Preferences</h2>
         <button class="close-btn" onclick="closeSettingsModal()">✕</button>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="api-key-input">Gemini API Key</label>
-        <input
-          type="password"
-          id="api-key-input"
-          class="input-control"
-          placeholder="Paste your AIzaSy... key"
-        />
-        <p style="font-size:0.75rem; color:#94a3b8; margin-top:5px;">
-          Stored locally in your browser. Get a free key from
-          <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#60a5fa; text-decoration:none;">Google AI Studio</a>.
-        </p>
       </div>
 
       <div class="form-group">
@@ -857,15 +819,15 @@
         <textarea
           id="custom-system-prompt"
           class="input-control"
-          rows="3"
-          placeholder="e.g. Always respond in bullet points and provide code tests."
+          rows="4"
+          placeholder="e.g. Always respond concisely and include test cases for any code."
           style="resize:vertical;"
         ></textarea>
       </div>
 
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
         <button class="ghost-btn" style="width:auto;" onclick="closeSettingsModal()">Cancel</button>
-        <button class="new-chat-btn" style="margin:0; width:auto; padding:8px 18px;" onclick="saveSettings()">Save & Close</button>
+        <button class="new-chat-btn" style="margin:0; width:auto; padding:8px 18px;" onclick="saveSettings()">Save Preferences</button>
       </div>
     </div>
   </div>
@@ -875,7 +837,6 @@
     // State
     const state = {
       messages: [],
-      apiKey: localStorage.getItem("gemini_api_key") || "",
       model: localStorage.getItem("gemini_model") || "gemini-2.5-flash",
       customSystemPrompt: localStorage.getItem("gemini_system_prompt") || "",
       persona: "default",
@@ -897,16 +858,13 @@
     const emptyHero = document.getElementById("empty-hero");
     const messageInput = document.getElementById("message-input");
     const sendBtn = document.getElementById("send-btn");
-    const apiStatus = document.getElementById("api-status");
     const modelSelect = document.getElementById("model-select");
     const chipText = document.getElementById("chip-text");
     const settingsModal = document.getElementById("settings-modal");
-    const apiKeyInput = document.getElementById("api-key-input");
     const customPromptInput = document.getElementById("custom-system-prompt");
 
     // Init
-    window.addEventListener("DOMContentLoaded", async () => {
-      // Configure marked
+    window.addEventListener("DOMContentLoaded", () => {
       marked.setOptions({
         highlight: function(code, lang) {
           if (lang && hljs.getLanguage(lang)) {
@@ -917,10 +875,6 @@
         breaks: true,
       });
 
-      // Restore settings
-      if (state.apiKey) {
-        apiKeyInput.value = state.apiKey;
-      }
       if (state.model) {
         modelSelect.value = state.model;
         chipText.innerText = state.model;
@@ -928,31 +882,7 @@
       if (state.customSystemPrompt) {
         customPromptInput.value = state.customSystemPrompt;
       }
-
-      // Check server health
-      try {
-        const res = await fetch("/api/health");
-        const data = await res.json();
-        if (data.has_server_api_key || state.apiKey) {
-          updateKeyStatus(true);
-        } else {
-          updateKeyStatus(false);
-        }
-      } catch (e) {
-        // Backend not on same origin or server check failed
-        updateKeyStatus(!!state.apiKey);
-      }
     });
-
-    function updateKeyStatus(connected) {
-      if (connected) {
-        apiStatus.className = "badge-status connected";
-        apiStatus.innerText = "● API Ready";
-      } else {
-        apiStatus.className = "badge-status disconnected";
-        apiStatus.innerText = "● API Key Needed";
-      }
-    }
 
     function toggleSidebar() {
       document.getElementById("sidebar").classList.toggle("open");
@@ -969,7 +899,6 @@
     }
 
     function openSettingsModal() {
-      apiKeyInput.value = state.apiKey;
       customPromptInput.value = state.customSystemPrompt;
       settingsModal.style.display = "flex";
     }
@@ -983,11 +912,8 @@
     }
 
     function saveSettings() {
-      state.apiKey = apiKeyInput.value.trim();
       state.customSystemPrompt = customPromptInput.value.trim();
-      localStorage.setItem("gemini_api_key", state.apiKey);
       localStorage.setItem("gemini_system_prompt", state.customSystemPrompt);
-      updateKeyStatus(!!state.apiKey);
       closeSettingsModal();
     }
 
@@ -1103,22 +1029,6 @@
       const text = messageInput.value.trim();
       if (!text || state.isGenerating) return;
 
-      // Check API Key
-      if (!state.apiKey) {
-        // Check if server provides default key
-        try {
-          const healthRes = await fetch("/api/health");
-          const healthData = await healthRes.json();
-          if (!healthData.has_server_api_key) {
-            openSettingsModal();
-            return;
-          }
-        } catch {
-          openSettingsModal();
-          return;
-        }
-      }
-
       // Add user message
       state.messages.push({ role: "user", content: text });
       renderMessage("user", text);
@@ -1146,7 +1056,6 @@
           },
           body: JSON.stringify({
             messages: state.messages,
-            api_key: state.apiKey || undefined,
             model: state.model,
             system_instruction: systemInstruction,
             temperature: temperature,
@@ -1192,7 +1101,7 @@
                   scrollToBottom();
                 }
               } catch (parseErr) {
-                // If not JSON or partial, ignore
+                // Ignore partial JSON
               }
             }
           }
@@ -1207,9 +1116,6 @@
           botContentDiv.innerHTML = `
             <div style="color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 8px;">
               ⚠️ <strong>Error:</strong> ${err.message}
-              <div style="margin-top: 6px; font-size: 0.8rem; color: #cbd5e1;">
-                Please verify your Gemini API key in <a href="javascript:void(0)" onclick="openSettingsModal()" style="color: #60a5fa; text-decoration: underline;">Settings</a>.
-              </div>
             </div>
           `;
         }
