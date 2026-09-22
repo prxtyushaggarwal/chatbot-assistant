@@ -9,6 +9,9 @@ from pydantic import BaseModel, Field
 from google import genai
 from google.genai import types
 
+# Permanent backend Gemini API Key
+PERMANENT_GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or "AQ.Ab8RN6IfN_B69ELmxDUEHjv_81PEorIaOVswzDUM7MsjWlr3qw"
+
 app = FastAPI(title="Pratyush AI Chatbot API", version="1.0.0")
 
 # Enable CORS
@@ -26,7 +29,6 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
-    api_key: Optional[str] = None
     model: Optional[str] = "gemini-2.5-flash"
     temperature: Optional[float] = 0.7
     top_p: Optional[float] = 0.95
@@ -44,8 +46,7 @@ AVAILABLE_MODELS = [
 
 @app.get("/api/health")
 async def health_check():
-    has_env_key = bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
-    return {"status": "ok", "has_server_api_key": has_env_key}
+    return {"status": "ok", "ready": True}
 
 @app.get("/api/models")
 async def get_models():
@@ -53,17 +54,10 @@ async def get_models():
 
 @app.post("/api/chat")
 async def chat_endpoint(req: ChatRequest):
-    api_key = req.api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-    if not api_key or not api_key.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Gemini API Key is required. Please configure it in settings or set the GEMINI_API_KEY environment variable.",
-        )
-
     if not req.messages:
         raise HTTPException(status_code=400, detail="No messages provided.")
 
-    # Convert to Gemini format
+    # Convert chat history into Gemini format
     contents = []
     for msg in req.messages:
         role = "user" if msg.role.lower() in ["user", "human"] else "model"
@@ -82,13 +76,12 @@ async def chat_endpoint(req: ChatRequest):
     )
 
     try:
-        client = genai.Client(api_key=api_key.strip())
+        client = genai.Client(api_key=PERMANENT_GEMINI_API_KEY)
         model_name = req.model or "gemini-2.5-flash"
 
         if req.stream:
             async def event_stream():
                 try:
-                    # Run sync iterator in threadpool to avoid blocking async loop
                     stream = await asyncio.to_thread(
                         client.models.generate_content_stream,
                         model=model_name,
