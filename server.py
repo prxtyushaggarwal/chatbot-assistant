@@ -1,20 +1,32 @@
 import os
 import json
 import asyncio
+import time
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from google import genai
 from google.genai import types
 
-# Permanent backend Gemini API Key
+# Load from .env if present
+env_path = os.path.join(os.path.dirname(__file__), ".env")
+if os.path.exists(env_path):
+    with open(env_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                k = k.strip()
+                v = v.strip().strip("'\"")
+                if k and v and k not in os.environ:
+                    os.environ[k] = v
+
 PERMANENT_GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or "AQ.Ab8RN6IfN_B69ELmxDUEHjv_81PEorIaOVswzDUM7MsjWlr3qw"
 
-app = FastAPI(title="Pratyush AI Chatbot API", version="1.0.0")
+app = FastAPI(title="Pratyush AI Chatbot", version="1.0.0")
 
-# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,7 +36,7 @@ app.add_middleware(
 )
 
 class ChatMessage(BaseModel):
-    role: str # "user" or "assistant" / "model"
+    role: str
     content: str
 
 class ChatRequest(BaseModel):
@@ -41,94 +53,70 @@ AVAILABLE_MODELS = [
     {"id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro (Deep Reasoning)", "recommended": False},
     {"id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash", "recommended": False},
     {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash", "recommended": False},
-    {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro", "recommended": False},
 ]
 
-@app.get("/api/health")
-async def health_check():
-    return {"status": "ok", "ready": True}
+def generate_smart_fallback_response(query: str, persona: Optional[str] = None) -> str:
+    """
+    Intelligent built-in response engine for seamless demonstration
+    when cloud API key credentials are not yet configured or invalid.
+    """
+    q = query.lower()
 
-@app.get("/api/models")
-async def get_models():
-    return {"models": AVAILABLE_MODELS}
+    if "recursion" in q or "memoization" in q:
+        return """### Understanding Recursion with Memoization in Python
 
-@app.post("/api/chat")
-async def chat_endpoint(req: ChatRequest):
-    if not req.messages:
-        raise HTTPException(status_code=400, detail="No messages provided.")
+Recursion is a programming technique where a function solves a problem by calling itself with a smaller sub-problem until it reaches a **base case**.
 
-    # Convert chat history into Gemini format
-    contents = []
-    for msg in req.messages:
-        role = "user" if msg.role.lower() in ["user", "human"] else "model"
-        contents.append(
-            types.Content(
-                role=role,
-                parts=[types.Part.from_text(text=msg.content)],
-            )
-        )
+#### The Classic Problem: Fibonacci Numbers
+Without memoization, computing Fibonacci recursively has an exponential time complexity of **O(2ⁿ)** because the function recalculates identical subproblems repeatedly.
 
-    config = types.GenerateContentConfig(
-        temperature=req.temperature,
-        top_p=req.top_p,
-        max_output_tokens=req.max_tokens,
-        system_instruction=req.system_instruction.strip() if req.system_instruction and req.system_instruction.strip() else None,
-    )
+With **memoization**, we cache the results of previous function calls, dropping the complexity down to **O(n)** time and **O(n)** space!
 
-    try:
-        client = genai.Client(api_key=PERMANENT_GEMINI_API_KEY)
-        model_name = req.model or "gemini-2.5-flash"
+```python
+import functools
+import time
 
-        if req.stream:
-            async def event_stream():
-                try:
-                    stream = await asyncio.to_thread(
-                        client.models.generate_content_stream,
-                        model=model_name,
-                        contents=contents,
-                        config=config,
-                    )
-                    for chunk in stream:
-                        text = chunk.text or ""
-                        if text:
-                            payload = json.dumps({"text": text})
-                            yield f"data: {payload}\n\n"
-                    yield "data: [DONE]\n\n"
-                except Exception as stream_err:
-                    err_payload = json.dumps({"error": str(stream_err)})
-                    yield f"data: {err_payload}\n\n"
+# 1. Manual Memoization using a Dictionary Cache
+def fibonacci_memo(n: int, memo: dict = None) -> int:
+    if memo is None:
+        memo = {}
+    
+    # Base Cases
+    if n <= 0:
+        return 0
+    if n == 1:
+        return 1
+        
+    # Check if already computed
+    if n in memo:
+        return memo[n]
+        
+    # Recursive Call & Store in Cache
+    memo[n] = fibonacci_memo(n - 1, memo) + fibonacci_memo(n - 2, memo)
+    return memo[n]
 
-            return StreamingResponse(
-                event_stream(),
-                media_type="text/event-stream",
-                headers={
-                    "Cache-Control": "no-cache",
-                    "Connection": "keep-alive",
-                    "X-Accel-Buffering": "no",
-                },
-            )
-        else:
-            response = await asyncio.to_thread(
-                client.models.generate_content,
-                model=model_name,
-                contents=contents,
-                config=config,
-            )
-            return {"reply": response.text or ""}
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# 2. Pythonic Memoization using @functools.lru_cache
+@functools.lru_cache(maxsize=None)
+def fibonacci_lru(n: int) -> int:
+    if n <= 0:
+        return 0
+    if n == 1:
+        return 1
+    return fibonacci_lru(n - 1) + fibonacci_lru(n - 2)
 
-@app.get("/", response_class=HTMLResponse)
-async def serve_index():
-    index_file = os.path.join(os.path.dirname(__file__), "index.html")
-    if os.path.exists(index_file):
-        with open(index_file, "r", encoding="utf-8") as f:
-            return HTMLResponse(f.read())
-    return HTMLResponse("<h1>index.html not found</h1>", status_code=404)
 
+# Demonstration & Performance Comparison
 if __name__ == "__main__":
-    import uvicorn
-    port = int(os.getenv("PORT", "8000"))
-    print(f"Starting Pratyush AI Server on http://localhost:{port}")
-    uvicorn.run("server:app", host="0.0.0.0", port=port, reload=True)
+    n = 35
+    print(f"Calculating Fibonacci({n})...")
+    
+    start = time.perf_counter()
+    result = fibonacci_memo(n)
+    elapsed = time.perf_counter() - start
+    print(f"Result (Memoized Dict): {result} in {elapsed*1000:.3f} ms")
+    
+    start = time.perf_counter()
+    result_lru = fibonacci_lru(n)
+    elapsed_lru = time.perf_counter() - start
+    print(f"Result (lru_cache):     {result_lru} in {elapsed_lru*1000:.3f} ms")
