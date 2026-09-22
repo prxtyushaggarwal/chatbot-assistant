@@ -3,6 +3,9 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
+# Permanent backend Gemini API Key
+PERMANENT_GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or "AQ.Ab8RN6IfN_B69ELmxDUEHjv_81PEorIaOVswzDUM7MsjWlr3qw"
+
 # ---------------------------------------------------------
 # PAGE CONFIG
 # ---------------------------------------------------------
@@ -69,61 +72,9 @@ st.markdown(
             font-weight: 400;
         }
 
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-top: 8px;
-        }
-        .badge-online {
-            background: rgba(16, 185, 129, 0.15);
-            color: #34d399;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-        .badge-warning {
-            background: rgba(245, 158, 11, 0.15);
-            color: #fbbf24;
-            border: 1px solid rgba(245, 158, 11, 0.3);
-        }
-
-        /* Starter cards */
-        .starter-card {
-            background: rgba(30, 41, 59, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 14px;
-            padding: 16px;
-            text-align: left;
-            transition: all 0.2s ease;
-            cursor: pointer;
-            margin-bottom: 10px;
-        }
-        .starter-card:hover {
-            background: rgba(30, 41, 59, 0.85);
-            border-color: rgba(96, 165, 250, 0.4);
-            transform: translateY(-2px);
-        }
-        .starter-icon {
-            font-size: 1.5rem;
-            margin-bottom: 8px;
-        }
-        .starter-title {
-            font-weight: 600;
-            color: #e2e8f0;
-            font-size: 0.95rem;
-        }
-        .starter-desc {
-            font-size: 0.8rem;
-            color: #94a3b8;
-            margin-top: 4px;
-        }
-
         /* Sidebar headers */
         .sidebar-heading {
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             text-transform: uppercase;
             letter-spacing: 0.08em;
             color: #94a3b8;
@@ -172,11 +123,6 @@ st.markdown(
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Detect API Key from environment or session state
-default_api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
-if "api_key" not in st.session_state:
-    st.session_state.api_key = default_api_key
-
 if "pending_prompt" not in st.session_state:
     st.session_state.pending_prompt = None
 
@@ -193,29 +139,8 @@ PERSONAS = {
 # SIDEBAR
 # ---------------------------------------------------------
 with st.sidebar:
-    st.markdown('<div class="sidebar-heading">🔑 Authentication</div>', unsafe_allow_html=True)
-    
-    api_key_input = st.text_input(
-        "Gemini API Key",
-        type="password",
-        value=st.session_state.api_key,
-        placeholder="AIzaSy...",
-        help="Get your API key free from Google AI Studio: https://aistudio.google.com/app/apikey",
-    )
-    if api_key_input:
-        st.session_state.api_key = api_key_input.strip()
-
-    if st.session_state.api_key:
-        st.markdown('<span class="badge badge-online">● API Key Connected</span>', unsafe_allow_html=True)
-    else:
-        st.markdown('<span class="badge badge-warning">⚠ API Key Required</span>', unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.divider()
-
     st.markdown('<div class="sidebar-heading">🧠 Model Selection</div>', unsafe_allow_html=True)
     model_options = [
-        "gemini-3.6-Flash",
         "gemini-2.5-flash",
         "gemini-2.5-pro",
         "gemini-2.0-flash",
@@ -290,7 +215,6 @@ with st.sidebar:
 
     with col_export:
         if st.session_state.messages:
-            # Prepare conversation as markdown
             chat_md = "# Conversation with Pratyush AI\n\n"
             for m in st.session_state.messages:
                 speaker = "User" if m["role"] == "user" else "Pratyush AI"
@@ -304,7 +228,7 @@ with st.sidebar:
                 help="Download conversation as Markdown",
             )
 
-    st.caption("🤖 **Pratyush AI** | Powered by Google GenAI SDK")
+    st.caption("🤖 **Pratyush AI** | Ready to Chat")
 
 # ---------------------------------------------------------
 # HEADER
@@ -386,11 +310,6 @@ if prompt_to_run:
     # Clear pending prompt so it doesn't trigger again on subsequent renders
     st.session_state.pending_prompt = None
 
-    if not st.session_state.api_key.strip():
-        st.error("⚠️ Please enter your Gemini API Key in the sidebar to begin.")
-        st.info("You can get a free API key at [Google AI Studio](https://aistudio.google.com/app/apikey).")
-        st.stop()
-
     # Append user message
     st.session_state.messages.append({
         "role": "user",
@@ -415,7 +334,7 @@ if prompt_to_run:
     # Stream bot response
     with st.chat_message("assistant", avatar="🤖"):
         try:
-            client = genai.Client(api_key=st.session_state.api_key.strip())
+            client = genai.Client(api_key=PERMANENT_GEMINI_API_KEY)
 
             config = types.GenerateContentConfig(
                 temperature=temperature,
@@ -447,4 +366,3 @@ if prompt_to_run:
         except Exception as e:
             error_message = f"❌ **Error generating response:**\n\n```\n{str(e)}\n```"
             st.markdown(error_message)
-            st.caption("Please check your API key and model selection in the sidebar.")
