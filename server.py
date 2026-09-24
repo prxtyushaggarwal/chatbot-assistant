@@ -24,7 +24,7 @@ if os.path.exists(env_path):
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
-app = FastAPI(title="Pratyush AI Chatbot", version="1.0.0")
+app = FastAPI(title="Sachi Priya AI Chatbot", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -217,7 +217,7 @@ When designing APIs for massive scale, apply this architectural blueprint:
 - [x] **Idempotency**: Require `Idempotency-Key` headers on POST/PUT endpoints."""
 
     else:
-        return f"""Hello! I am **Pratyush AI**, your intelligent assistant powered by Google Gemini.
+        return f"""Hello! I am **Sachi Priya AI**, your intelligent assistant powered by Google Gemini.
 
 I received your prompt:
 > *"{query}"*
@@ -330,10 +330,10 @@ async def serve_index():
     if os.path.exists(index_file):
         with open(index_file, "r", encoding="utf-8") as f:
             return HTMLResponse(f.read())
-    return HTMLResponse("<h1>Pratyush AI</h1><p>index.html not found</p>", status_code=404)
+    return HTMLResponse("<h1>Sachi Priya AI</h1><p>index.html not found</p>", status_code=404)
 
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", "8000"))
-    print(f"Starting Pratyush AI on http://localhost:{port}")
+    print(f"Starting Sachi Priya AI on http://localhost:{port}")
     uvicorn.run("server:app", host="0.0.0.0", port=port, reload=False)

@@ -5,7 +5,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pratyush AI — Intelligent Gemini Chatbot</title>
+  <title>Sachi Priya AI — Intelligent Gemini Chatbot</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
@@ -97,7 +97,7 @@
 <body>
   <aside id="sidebar">
     <div class="sidebar-header">
-      <div class="brand-logo"><span>🤖</span><span class="brand-title">Pratyush AI</span></div>
+      <div class="brand-logo"><span>🤖</span><span class="brand-title">Sachi Priya AI</span></div>
     </div>
     <button class="new-chat-btn" onclick="clearConversation()">+ New Chat</button>
     <div class="sidebar-section">
@@ -148,7 +148,7 @@
 
     <div class="input-dock">
       <div class="input-container">
-        <textarea id="message-input" placeholder="Message Pratyush AI... (Enter to send, Shift+Enter for new line)" rows="1" onkeydown="handleInputKey(event)"></textarea>
+        <textarea id="message-input" placeholder="Message Sachi Priya AI... (Enter to send, Shift+Enter for new line)" rows="1" onkeydown="handleInputKey(event)"></textarea>
         <button id="send-btn" class="action-btn" onclick="sendMessage()">➤</button>
       </div>
     </div>
@@ -263,8 +263,8 @@
 
     function exportChat() {
       if (!state.messages.length) return alert("No messages to export.");
-      let md = "# Conversation with Pratyush AI\n\n";
-      state.messages.forEach(m => md += `### ${m.role === 'user' ? 'User' : 'Pratyush AI'}:\n${m.content}\n\n`);
+      let md = "# Conversation with Sachi Priya AI\n\n";
+      state.messages.forEach(m => md += `### ${m.role === 'user' ? 'User' : 'Sachi Priya AI'}:\n${m.content}\n\n`);
       const blob = new Blob([md], { type: "text/markdown" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
