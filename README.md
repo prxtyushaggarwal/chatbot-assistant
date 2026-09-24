@@ -1,4 +1,4 @@
-# 🤖 Sachi Priya AI — Intelligent Gemini Chatbot
+# 🤖 Pratyush AI — Intelligent Gemini Chatbot
 
 A high-performance, modern conversational AI assistant powered by **Google Gemini** (via the official `google-genai` SDK).
 
