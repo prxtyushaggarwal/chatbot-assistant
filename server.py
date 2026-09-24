@@ -245,11 +245,11 @@ async def chat_endpoint(req: ChatRequest):
         raise HTTPException(status_code=400, detail="No messages provided.")
 
     latest_user_query = req.messages[-1].content
-    use_cloud_api = bool(GEMINI_API_KEY and GEMINI_API_KEY.startswith("AIzaSy"))
+    use_cloud_api = bool(GEMINI_API_KEY and len(GEMINI_API_KEY.strip()) > 5)
 
     if use_cloud_api:
         try:
-            client = genai.Client(api_key=GEMINI_API_KEY)
+            client = genai.Client(api_key=GEMINI_API_KEY.strip())
             model_name = req.model or "gemini-2.5-flash"
             contents = []
             for msg in req.messages:
@@ -260,11 +260,18 @@ async def chat_endpoint(req: ChatRequest):
                         parts=[types.Part.from_text(text=msg.content)],
                     )
                 )
+            
+            system_prompt = req.system_instruction or (
+                "You are an elite, highly knowledgeable AI assistant. "
+                "Provide detailed, precise, well-structured, and helpful answers. "
+                "For code requests, provide clean, idiomatic, fully explained code with best practices."
+            )
+
             config = types.GenerateContentConfig(
                 temperature=req.temperature,
                 top_p=req.top_p,
                 max_output_tokens=req.max_tokens,
-                system_instruction=req.system_instruction.strip() if req.system_instruction else None,
+                system_instruction=system_prompt.strip() if system_prompt else None,
             )
 
             if req.stream:
@@ -281,11 +288,18 @@ async def chat_endpoint(req: ChatRequest):
                             if text:
                                 yield f"data: {json.dumps({'text': text})}\n\n"
                         yield "data: [DONE]\n\n"
-                    except Exception:
-                        fallback_text = generate_smart_response(latest_user_query)
-                        for word in fallback_text.split(" "):
-                            yield f"data: {json.dumps({'text': word + ' '})}\n\n"
-                            await asyncio.sleep(0.015)
+                    except Exception as stream_err:
+                        err_str = str(stream_err)
+                        if "401" in err_str or "UNAUTHENTICATED" in err_str:
+                            err_msg = (
+                                "⚠️ Google Gemini Authentication Error (401):\n\n"
+                                "The key currently in your `.env` is not accepted by Google AI Studio.\n\n"
+                                "👉 Please get a free API key from https://aistudio.google.com/app/apikey (starts with `AIzaSy...`) "
+                                "and update your `.env` file (`GEMINI_API_KEY=AIzaSy...`)."
+                            )
+                        else:
+                            err_msg = f"⚠️ Gemini Error: {err_str}"
+                        yield f"data: {json.dumps({'text': err_msg})}\n\n"
                         yield "data: [DONE]\n\n"
 
                 return StreamingResponse(
@@ -301,28 +315,28 @@ async def chat_endpoint(req: ChatRequest):
                     config=config,
                 )
                 return {"reply": response.text or ""}
-        except Exception:
-            pass
+        except Exception as e:
+            err_str = str(e)
+            if "401" in err_str or "UNAUTHENTICATED" in err_str:
+                return {
+                    "reply": (
+                        "⚠️ Google Gemini Authentication Error (401):\n\n"
+                        "The key currently in your `.env` is not accepted by Google AI Studio.\n\n"
+                        "👉 Please get a free API key from https://aistudio.google.com/app/apikey (starts with `AIzaSy...`) "
+                        "and update your `.env` file (`GEMINI_API_KEY=AIzaSy...`)."
+                    )
+                }
+            return {"reply": f"⚠️ Gemini Error: {err_str}"}
 
-    # Built-in High-Performance Assistant Generator
-    fallback_text = generate_smart_response(latest_user_query, req.system_instruction)
-
-    if req.stream:
-        async def fallback_stream():
-            words = fallback_text.split(" ")
-            for i, word in enumerate(words):
-                spacer = " " if i < len(words) - 1 else ""
-                yield f"data: {json.dumps({'text': word + spacer})}\n\n"
-                await asyncio.sleep(0.012)
-            yield "data: [DONE]\n\n"
-
-        return StreamingResponse(
-            fallback_stream(),
-            media_type="text/event-stream",
-            headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
-        )
-    else:
-        return {"reply": fallback_text}
+    # If no key at all is configured, guide the user
+    guide_msg = (
+        "👋 Welcome to Pratyush AI!\n\n"
+        "To get real-time answers from Google's best Gemini models (`gemini-2.5-flash`, `gemini-2.5-pro`), please add a Gemini API key:\n\n"
+        "1. Get your free key at: **https://aistudio.google.com/app/apikey**\n"
+        "2. Add it to your `.env` file: `GEMINI_API_KEY=AIzaSy...`\n"
+        "3. Restart the server or reply here with your key!"
+    )
+    return {"reply": guide_msg}
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
