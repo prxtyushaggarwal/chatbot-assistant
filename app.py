@@ -39,7 +39,7 @@ PERSONAS = {
 
 with st.sidebar:
     st.markdown("### 🧠 Model Selection")
-    active_model = st.selectbox("Model", ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"], index=0)
+    active_model = st.selectbox("Model", ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.8-flash", "gemini-3.5-flash"], index=0)
     persona_choice = st.selectbox("Persona", list(PERSONAS.keys()), index=0)
     system_instruction = PERSONAS[persona_choice]
     temperature = st.slider("Temperature", 0.0, 2.0, 0.7, 0.05)
@@ -91,7 +91,7 @@ if prompt_to_run:
 
     with st.chat_message("assistant", avatar="🤖"):
         generated = False
-        if GEMINI_API_KEY.startswith("AIzaSy"):
+        if len(GEMINI_API_KEY.strip()) > 5:
             try:
                 client = genai.Client(api_key=GEMINI_API_KEY)
                 config = types.GenerateContentConfig(

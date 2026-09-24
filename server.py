@@ -40,7 +40,7 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
-    model: Optional[str] = "gemini-2.5-flash"
+    model: Optional[str] = "gemini-3.6-flash"
     temperature: Optional[float] = 0.7
     top_p: Optional[float] = 0.95
     max_tokens: Optional[int] = 4096
@@ -48,10 +48,10 @@ class ChatRequest(BaseModel):
     stream: Optional[bool] = True
 
 AVAILABLE_MODELS = [
-    {"id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash (Fast & Smart)", "recommended": True},
-    {"id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro (Deep Reasoning)", "recommended": False},
-    {"id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash", "recommended": False},
-    {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash", "recommended": False},
+    {"id": "gemini-3.6-flash", "name": "Gemini 3.6 Flash (Latest, Fast & Smart)", "recommended": True},
+    {"id": "gemini-3.7-flash", "name": "Gemini 3.7 Flash", "recommended": False},
+    {"id": "gemini-3.8-flash", "name": "Gemini 3.8 Flash", "recommended": False},
+    {"id": "gemini-3.5-flash", "name": "Gemini 3.5 Flash", "recommended": False},
 ]
 
 def generate_smart_response(query: str, persona: Optional[str] = None) -> str:
@@ -250,7 +250,7 @@ async def chat_endpoint(req: ChatRequest):
     if use_cloud_api:
         try:
             client = genai.Client(api_key=GEMINI_API_KEY.strip())
-            model_name = req.model or "gemini-2.5-flash"
+            model_name = req.model or "gemini-3.6-flash"
             contents = []
             for msg in req.messages:
                 role = "user" if msg.role.lower() in ["user", "human"] else "model"
